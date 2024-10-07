@@ -7,18 +7,22 @@ dotenv.config();
 
 // ( 카테고리 별 , 신간 여부) 전체 도서 목록 조회
 const allBooks = (req, res) => {
-  let { category_id, news } = req.query;
+  let { category_id, news, limit, currentPage} = req.query;
+  // limit : page 당 도서 수
+  // currentPage: 현재 몇 페이지 ex.1,2,3
+  // offset: limit * (currentPage - 1)
+  let offset = limit * (currentPage - 1);
 
-  let sql = "SELECT * FROM books";
-  let values = [];
+  let sql = "SELECT * FROM books LIMIT ? OFFSET ?";
+  let values = [parseInt(limit), offset];
 
   if (category_id && news) {
     sql += " WHERE category_id =? AND pub_date BETWEEN DATE_SUB(NOW(),INTERVAL 1 MONTH) AND NOW()";
-    values = [category_id, news];
+    values.push(category_id, news);
   }
   else if (category_id) {
     sql += " WHERE category_id =?";
-    values = category_id;
+    values.push(category_id);
   }
   else if (news) {
     sql += " WHERE pub_date BETWEEN DATE_SUB(NOW(),INTERVAL 1 MONTH) AND NOW()";
