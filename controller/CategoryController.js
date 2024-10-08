@@ -1,9 +1,5 @@
 const conn = require('../mariadb');
 const { StatusCodes } = require('http-status-codes');
-const jwt = require('jsonwebtoken'); //jwt 모듈
-const crypto = require('crypto'); // crypto 모듈 : 암호화
-const dotenv = require('dotenv'); //dotenv 모듈
-dotenv.config();
 
 // 카테고리 전체 목록 조회
 const allCategory = (req, res) => {
