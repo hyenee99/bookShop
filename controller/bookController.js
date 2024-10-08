@@ -7,13 +7,13 @@ dotenv.config();
 
 // ( 카테고리 별 , 신간 여부) 전체 도서 목록 조회
 const allBooks = (req, res) => {
-  let { category_id, news, limit, currentPage} = req.query;
+  let { category_id, news, limit, currentPage } = req.query;
   // limit : page 당 도서 수
   // currentPage: 현재 몇 페이지 ex.1,2,3
   // offset: limit * (currentPage - 1)
   let offset = limit * (currentPage - 1);
 
-  let sql = "SELECT * FROM books";
+  let sql = "SELECT *, (SELECT count(*) FROM likes WHERE liked_book_id=books.id) AS likes FROM books";
   let values = [];
 
   if (category_id && news) {
@@ -28,7 +28,7 @@ const allBooks = (req, res) => {
     sql += " WHERE pub_date BETWEEN DATE_SUB(NOW(),INTERVAL 1 MONTH) AND NOW()";
   }
 
-  sql+=" LIMIT ? OFFSET ?";
+  sql += " LIMIT ? OFFSET ?";
   values.push(parseInt(limit), offset);
 
   conn.query(sql, values,
@@ -47,10 +47,18 @@ const allBooks = (req, res) => {
 
 // 개별 도서 조회
 const bookDetail = (req, res) => {
-  let { id } = req.params;
-  let sql = `SELECT * FROM Bookshop.books LEFT JOIN category ON books.category_id = category.id WHERE books.id=?`;
+  let {user_id} = req.body;
+  let book_id= req.params.id;
+  let sql = `SELECT *,
+	              (SELECT count(*) FROM likes WHERE liked_book_id=books.id) AS likes,
+	              (SELECT EXISTS(SELECT * FROM likes WHERE user_id = ? AND liked_book_id=?)) AS liked 
+	              FROM books 
+                LEFT JOIN category 
+                ON books.category_id = category.category_id 
+                WHERE books.id=?;`;
+  let values = [user_id, book_id, book_id];
 
-  conn.query(sql, id,
+  conn.query(sql, values,
     (err, results) => {
       if (err) {
         console.log(err);
