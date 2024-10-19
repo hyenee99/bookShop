@@ -8,13 +8,14 @@ const ensureAuthorization = require('../auth'); //인증 모듈
 
 // ( 카테고리 별 , 신간 여부) 전체 도서 목록 조회
 const allBooks = (req, res) => {
+  let allBooksRes = {};
   let { category_id, news, limit, currentPage } = req.query;
   // limit : page 당 도서 수
   // currentPage: 현재 몇 페이지 ex.1,2,3
   // offset: limit * (currentPage - 1)
   let offset = limit * (currentPage - 1);
 
-  let sql = "SELECT *, (SELECT count(*) FROM likes WHERE liked_book_id=books.id) AS likes FROM books";
+  let sql = "SELECT SQL_CALC_FOUND_ROWS *, (SELECT count(*) FROM likes WHERE liked_book_id=books.id) AS likes FROM books";
   let values = [];
 
   if (category_id && news) {
@@ -38,10 +39,31 @@ const allBooks = (req, res) => {
         console.log(err);
         return res.status(StatusCodes.BAD_REQUEST).end();
       }
+
       if (results.length)
-        return res.status(StatusCodes.OK).json(results);
+        allBooksRes.books = results;
       else
         return res.status(StatusCodes.NOT_FOUND).end();
+    }
+  )
+
+  sql = "SELECT found_rows()";
+  values.push(parseInt(limit), offset);
+
+  conn.query(sql,
+    (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(StatusCodes.BAD_REQUEST).end();
+      }
+    
+      let pagination = {};
+      pagination.currentPage = currentPage;
+      pagination.totalCount = results[0]["found_rows()"];
+
+      allBooksRes.pagination = pagination;
+
+      return res.status(StatusCodes.OK).json(allBooksRes);
     }
   )
 };
@@ -62,7 +84,7 @@ const bookDetail = (req, res) => {
       "message": "잘못된 토큰입니다."
     });
   }
-  else if(authorization instanceof ReferenceError) {
+  else if (authorization instanceof ReferenceError) {
     let book_id = req.params.id;
     let sql = `SELECT *,
 	              (SELECT count(*) FROM likes WHERE liked_book_id=books.id) AS likes
